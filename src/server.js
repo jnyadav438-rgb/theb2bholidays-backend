@@ -11,7 +11,7 @@ connectDB().then(async () => {
   const adminPass = process.env.ADMIN_PASSWORD;
   
   if (adminEmail && adminPass) {
-    const admin = await User.findOne({ email: adminEmail });
+    const admin = await User.findOne({ email: adminEmail }).select('+password');
     if (!admin) {
       await User.create({ 
         name: 'System Admin', 
@@ -20,6 +20,13 @@ connectDB().then(async () => {
         role: 'admin' 
       });
       logger.info('Admin user created from environment variables.');
+    } else {
+      const isMatch = await admin.matchPassword(adminPass);
+      if (!isMatch) {
+        admin.password = adminPass;
+        await admin.save();
+        logger.info('Admin password updated from environment variables.');
+      }
     }
   }
 
