@@ -2,6 +2,28 @@ import Package from '../models/Package.js';
 import Category from '../models/Category.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
+// ── Sorting helper: Bali & Vietnam first, then international, then domestic ──
+function prioritySort(items, nameField = 'title') {
+  const pinned = ['bali', 'vietnam'];
+  return [...items].sort((a, b) => {
+    const aName = (a[nameField] || a.country || a.city || '').toLowerCase();
+    const bName = (b[nameField] || b.country || b.city || '').toLowerCase();
+    const aCountry = (a.country || '').toLowerCase();
+    const bCountry = (b.country || '').toLowerCase();
+    const aCity = (a.city || '').toLowerCase();
+    const bCity = (b.city || '').toLowerCase();
+    const aMatch = pinned.findIndex(p => aName.includes(p) || aCountry.includes(p) || aCity.includes(p));
+    const bMatch = pinned.findIndex(p => bName.includes(p) || bCountry.includes(p) || bCity.includes(p));
+    if (aMatch !== -1 && bMatch !== -1) return aMatch - bMatch;
+    if (aMatch !== -1) return -1;
+    if (bMatch !== -1) return 1;
+    const aIntl = a.type === 'international' ? 0 : 1;
+    const bIntl = b.type === 'international' ? 0 : 1;
+    if (aIntl !== bIntl) return aIntl - bIntl;
+    return 0;
+  });
+}
+
 const buildFilter = (query) => {
   const {
     q, destination, country, state, city, type, theme, category, month,
@@ -50,19 +72,19 @@ export const listPackages = asyncHandler(async (req, res) => {
     Package.find(filter).sort(sortMap[sort] || sortMap.popularity).skip(skip).limit(Number(limit)).populate('destination', 'name slug country').populate('category', 'name slug'),
     Package.countDocuments(filter)
   ]);
-  res.json({ success: true, total, page: Number(page), pages: Math.ceil(total / Number(limit)), count: items.length, items });
+  res.json({ success: true, total, page: Number(page), pages: Math.ceil(total / Number(limit)), count: items.length, items: prioritySort(items) });
 });
 
 // GET /api/packages/bestselling
 export const bestSellingPackages = asyncHandler(async (req, res) => {
   const items = await Package.find({ bestSelling: true }).sort({ rating: -1 }).limit(Number(req.query.limit) || 12).populate('category', 'name slug');
-  res.json({ success: true, items });
+  res.json({ success: true, items: prioritySort(items) });
 });
 
 // GET /api/packages/trending
 export const trendingPackages = asyncHandler(async (req, res) => {
   const items = await Package.find({ trending: true }).sort({ rating: -1 }).limit(Number(req.query.limit) || 12).populate('category', 'name slug');
-  res.json({ success: true, items });
+  res.json({ success: true, items: prioritySort(items) });
 });
 
 // GET /api/packages/category/:slug
@@ -75,7 +97,7 @@ export const packagesByCategory = asyncHandler(async (req, res) => {
     Package.find(filter).sort(sortMap[sort] || sortMap.popularity).skip(skip).limit(Number(limit)),
     Package.countDocuments(filter)
   ]);
-  res.json({ success: true, category, total, page: Number(page), pages: Math.ceil(total / Number(limit)), items });
+  res.json({ success: true, category, total, page: Number(page), pages: Math.ceil(total / Number(limit)), items: prioritySort(items) });
 });
 
 // GET /api/packages/:slug

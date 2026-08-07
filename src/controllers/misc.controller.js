@@ -6,13 +6,31 @@ import Wallet from '../models/Wallet.js';
 import Package from '../models/Package.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
+// ── Sorting helper: Bali & Vietnam first, then international, then domestic ──
+function prioritySort(items, nameField = 'name') {
+  const pinned = ['bali', 'vietnam'];
+  return [...items].sort((a, b) => {
+    const aName = (a[nameField] || a.country || '').toLowerCase();
+    const bName = (b[nameField] || b.country || '').toLowerCase();
+    const aPin = pinned.findIndex(p => aName.includes(p));
+    const bPin = pinned.findIndex(p => bName.includes(p));
+    if (aPin !== -1 && bPin !== -1) return aPin - bPin;
+    if (aPin !== -1) return -1;
+    if (bPin !== -1) return 1;
+    const aIntl = a.type === 'international' ? 0 : 1;
+    const bIntl = b.type === 'international' ? 0 : 1;
+    if (aIntl !== bIntl) return aIntl - bIntl;
+    return 0;
+  });
+}
+
 // Destinations
 export const listDestinations = asyncHandler(async (req, res) => {
   const filter = {};
   if (req.query.popular) filter.popular = true;
   if (req.query.type) filter.type = req.query.type;
   const items = await Destination.find(filter);
-  res.json({ success: true, items });
+  res.json({ success: true, items: prioritySort(items, 'name') });
 });
 
 // Blogs

@@ -3,6 +3,24 @@ import Package from '../models/Package.js';
 import Review from '../models/Review.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
+// ── Sorting helper: Bali & Vietnam first, then international, then domestic ──
+function prioritySort(items, nameField = 'name') {
+  const pinned = ['bali', 'vietnam'];
+  return [...items].sort((a, b) => {
+    const aName = (a[nameField] || a.country || '').toLowerCase();
+    const bName = (b[nameField] || b.country || '').toLowerCase();
+    const aPin = pinned.findIndex(p => aName.includes(p));
+    const bPin = pinned.findIndex(p => bName.includes(p));
+    if (aPin !== -1 && bPin !== -1) return aPin - bPin;
+    if (aPin !== -1) return -1;
+    if (bPin !== -1) return 1;
+    const aIntl = a.type === 'international' ? 0 : 1;
+    const bIntl = b.type === 'international' ? 0 : 1;
+    if (aIntl !== bIntl) return aIntl - bIntl;
+    return 0;
+  });
+}
+
 // GET /api/destinations  (filter + sort)
 export const listDestinations = asyncHandler(async (req, res) => {
   const { type, country, q, sort = 'order', page = 1, limit = 12 } = req.query;
@@ -16,13 +34,13 @@ export const listDestinations = asyncHandler(async (req, res) => {
     Destination.find(filter).sort(sortMap[sort] || sortMap.order).skip(skip).limit(Number(limit)),
     Destination.countDocuments(filter)
   ]);
-  res.json({ success: true, total, page: Number(page), pages: Math.ceil(total / Number(limit)), items });
+  res.json({ success: true, total, page: Number(page), pages: Math.ceil(total / Number(limit)), items: prioritySort(items, 'name') });
 });
 
 // GET /api/destinations/popular
 export const popularDestinations = asyncHandler(async (req, res) => {
   const items = await Destination.find({ popular: true }).sort({ displayOrder: 1 }).limit(Number(req.query.limit) || 12);
-  res.json({ success: true, items });
+  res.json({ success: true, items: prioritySort(items, 'name') });
 });
 
 // GET /api/destinations/:slug  (full page data)

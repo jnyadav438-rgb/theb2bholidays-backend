@@ -84,6 +84,28 @@ app.use('/api/search', searchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/enquiries', enquiryRoutes);
 
+// ── Sorting helper: Bali & Vietnam first, then international, then domestic ──
+function prioritySort(items, nameField = 'name') {
+  const pinned = ['bali', 'vietnam'];
+  return items.sort((a, b) => {
+    const aName = (a[nameField] || a.country || '').toLowerCase();
+    const bName = (b[nameField] || b.country || '').toLowerCase();
+    const aPin = pinned.findIndex(p => aName.includes(p));
+    const bPin = pinned.findIndex(p => bName.includes(p));
+    // Both pinned – sort by pin order (Bali=0, Vietnam=1)
+    if (aPin !== -1 && bPin !== -1) return aPin - bPin;
+    // One pinned – pinned comes first
+    if (aPin !== -1) return -1;
+    if (bPin !== -1) return 1;
+    // International before domestic
+    const aIntl = a.type === 'international' ? 0 : 1;
+    const bIntl = b.type === 'international' ? 0 : 1;
+    if (aIntl !== bIntl) return aIntl - bIntl;
+    // Preserve existing order within same group
+    return 0;
+  });
+}
+
 // Combined homepage data endpoint
 app.get('/api/homepage', async (req, res, next) => {
   try {
@@ -95,7 +117,15 @@ app.get('/api/homepage', async (req, res, next) => {
       Package.find({ fixedDeparture: true }).sort({ displayOrder: 1 }).limit(4).lean(),
       Blog.find({ published: true }).sort({ createdAt: -1 }).limit(3).lean()
     ]);
-    res.json({ success: true, destinations, bestSellers, categories, trending, fixedDeps, blogs });
+    res.json({
+      success: true,
+      destinations: prioritySort([...destinations], 'name'),
+      bestSellers: prioritySort([...bestSellers], 'title'),
+      categories,
+      trending: prioritySort([...trending], 'title'),
+      fixedDeps: prioritySort([...fixedDeps], 'title'),
+      blogs
+    });
   } catch (err) {
     next(err);
   }
