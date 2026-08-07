@@ -7,21 +7,21 @@ import Package from './src/models/Package.js';
 dotenv.config();
 
 const badIds = [
-  'photo-1526761122248-c31c93f8b299',
-  'photo-1579402925501-c89b7b9d6a36',
-  'photo-1599859556100-2440938ff5d5',
-  'photo-1627582236203-0c4e09fde119',
-  'photo-1615836245337-f5b9b230bc18',
-  'photo-1564507592208-0287afa58b5e',
-  'photo-1593693397690-362cb9666c6b',
-  'photo-1605649487212-4d4ce7a9d0a1',
-  'photo-1621876547631-50a1df277da2',
-  'photo-1588691505307-e17f259db1f2',
-  'photo-1589394815804-964ce0fa58c4',
-  'photo-1601007204439-d3e75e1141fc'
+  '1574349977051-5fbb79ab2b59',
+  '1600100397608-f010f419c9ba',
+  '1593693397690-362cb9666c6b',
+  '1564507592208-0287afa58b5e',
+  '1579603058866-26759c87d46c',
+  '1587595431973-160d0d94add1',
+  '1610416955097-bf0e54d5d3ff',
+  '1624806037748-03875317f0dd'
 ];
 
-const goodId = 'photo-1436491865332-7a61a109cc05';
+const goodId = '1512343879784-a960bf40e7f2'; // Goa image
+
+// Bhutan image fix
+const oldBhutanId = '1603262110263-fb0112e7cc33';
+const newBhutanId = '1578556881786-851d4b79cb73';
 
 const run = async () => {
   try {
@@ -46,14 +46,23 @@ const run = async () => {
         badIds.forEach(id => { d.image = d.image.replace(id, goodId); });
         changed = true;
       }
+      if(d.image && d.image.includes(oldBhutanId)) {
+        d.image = d.image.replace(oldBhutanId, newBhutanId);
+        changed = true;
+      }
       if(d.banner && badIds.some(id => d.banner.includes(id))) {
         badIds.forEach(id => { d.banner = d.banner.replace(id, goodId); });
+        changed = true;
+      }
+      if(d.banner && d.banner.includes(oldBhutanId)) {
+        d.banner = d.banner.replace(oldBhutanId, newBhutanId);
         changed = true;
       }
       if(d.gallery && d.gallery.length) {
         d.gallery = d.gallery.map(g => {
           let updated = g;
           badIds.forEach(id => { updated = updated.replace(id, goodId); });
+          updated = updated.replace(oldBhutanId, newBhutanId);
           if(updated !== g) changed = true;
           return updated;
         });
@@ -72,14 +81,23 @@ const run = async () => {
         badIds.forEach(id => { p.thumbnail = p.thumbnail.replace(id, goodId); });
         changed = true;
       }
+      if(p.thumbnail && p.thumbnail.includes(oldBhutanId)) {
+        p.thumbnail = p.thumbnail.replace(oldBhutanId, newBhutanId);
+        changed = true;
+      }
       if(p.coverImage && badIds.some(id => p.coverImage.includes(id))) {
         badIds.forEach(id => { p.coverImage = p.coverImage.replace(id, goodId); });
+        changed = true;
+      }
+      if(p.coverImage && p.coverImage.includes(oldBhutanId)) {
+        p.coverImage = p.coverImage.replace(oldBhutanId, newBhutanId);
         changed = true;
       }
       if(p.images && p.images.length) {
         p.images = p.images.map(img => {
           let updated = img;
           badIds.forEach(id => { updated = updated.replace(id, goodId); });
+          updated = updated.replace(oldBhutanId, newBhutanId);
           if(updated !== img) changed = true;
           return updated;
         });
@@ -88,6 +106,10 @@ const run = async () => {
         p.itinerary = p.itinerary.map(day => {
           if(day.image && badIds.some(id => day.image.includes(id))) {
             badIds.forEach(id => { day.image = day.image.replace(id, goodId); });
+            changed = true;
+          }
+          if(day.image && day.image.includes(oldBhutanId)) {
+            day.image = day.image.replace(oldBhutanId, newBhutanId);
             changed = true;
           }
           return day;
